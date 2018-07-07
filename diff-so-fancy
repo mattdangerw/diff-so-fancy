@@ -117,7 +117,7 @@ sub do_dsf_stuff {
 		if ($line =~ /^${ansi_color_regex}index /) {
 			# Print the line color and then the actual line
 			$meta_color = $1 || DiffHighlight::color_config('color.diff.meta',"\e[38;5;11m");
-			print horizontal_rule($meta_color);
+			print horizontal_rule($meta_color, 1);
 
 			# Get the next line without incrementing counter while loop
 			my $next = $input->[0] || "";
@@ -138,8 +138,8 @@ sub do_dsf_stuff {
 			}
 
 			if ($file_1 && $file_2) {
-				print $meta_color . file_change_string($file_1,$file_2) . "\n";
-				print horizontal_rule($meta_color);
+				print "│ " . $meta_color . file_change_string($file_1,$file_2) . "\n";
+				print horizontal_rule($meta_color, 0);
 			}
 		#########################
 		# Look for the filename #
@@ -176,10 +176,10 @@ sub do_dsf_stuff {
 				$last_file_seen = $file_2;
 			}
 
-			print file_change_string($file_1,$file_2) . "\n";
+			print "│ " . file_change_string($file_1,$file_2) . "\n";
 
 			# Print out the bottom horizontal line of the header
-			print horizontal_rule($meta_color);
+			print horizontal_rule($meta_color, 0);
 		########################################
 		# Check for "@@ -3,41 +3,63 @@" syntax #
 		########################################
@@ -222,8 +222,8 @@ sub do_dsf_stuff {
 		################################
 		} elsif ($line =~ /^Binary files (\w\/)?(.+?) and (\w\/)?(.+?) differ/) {
 			my $change = file_change_string($2,$4);
-			print "$meta_color$change (binary)\n";
-			print horizontal_rule($meta_color);
+			print "│ " . "$meta_color$change (binary)\n";
+			print horizontal_rule($meta_color, 0);
 		#####################################################
 		# Check if we're changing the permissions of a file #
 		#####################################################
@@ -263,9 +263,9 @@ sub do_dsf_stuff {
 
 				my $change = file_change_string($file1,$file2);
 
-				print horizontal_rule($meta_color);
-				print $meta_color . $change . "\n";
-				print horizontal_rule($meta_color);
+				print horizontal_rule($meta_color, 1);
+				print $meta_color . "│ " . $change . "\n";
+				print horizontal_rule($meta_color, 0);
 			}
 
 			$i += 3; # We've consumed three lines
@@ -541,8 +541,12 @@ sub horizontal_rule {
 		$dash = "-";
 	}
 
+	my $lead = "└";
+	if ($_[1]) {
+		$lead = "┌";
+	}
 	# Draw the line
-	my $ret = $color . ($dash x $width) . "\n";
+	my $ret = $color . $lead . ($dash x $width) . "\n";
 
 	return $ret;
 }
