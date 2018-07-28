@@ -20,6 +20,7 @@ our@NEW_HIGHLIGHT = (
 
 my $RESET = "\x1b[m";
 my $COLOR = qr/\x1b\[[0-9;]*m/;
+my $RESET_MATCH = qr/\x1b\[[0;]?m/;
 my $BORING = qr/$COLOR|\s/;
 
 # The patch portion of git log -p --graph should only ever have preceding | and
@@ -33,11 +34,40 @@ my $in_hunk;
 our $line_cb = sub { print @_ };
 our $flush_cb = sub { local $| = 1 };
 
+sub mark_tab {
+	my @a = split_line(shift);
+	
+	my $pa = 0;
+	my $color = '';
+	while ($pa < @a) {
+		if ($a[$pa] =~ /$COLOR/) {
+			$color = $a[$pa];
+		} elsif ($a[$pa] =~ /$RESET_MATCH/) {
+			$color = '';
+		} elsif ($a[$pa] eq "\t") {
+			$a[$pa] = join('', $RESET, "\x1b[38;5;242m", "→   ", $RESET, $color);
+		}
+		$pa++;
+	}
+
+	return join('', @a);
+}
+
+sub wrapped_line_cb {
+	my @queue;
+	foreach my $arg (@_)
+	{
+		$arg = mark_tab($arg);
+		push @queue, $arg;
+	}
+	$line_cb->(@queue);
+}
+
 sub handle_line {
 	local $_ = shift;
 
 	if (!$in_hunk) {
-		$line_cb->($_);
+		wrapped_line_cb($_);
 		$in_hunk = /^$GRAPH*$COLOR*\@\@ /;
 	}
 	elsif (/^$GRAPH*$COLOR*-/) {
@@ -51,7 +81,7 @@ sub handle_line {
 		@removed = ();
 		@added = ();
 
-		$line_cb->($_);
+		wrapped_line_cb($_);
 		$in_hunk = /^$GRAPH*$COLOR*[\@ ]/;
 	}
 
@@ -97,7 +127,7 @@ sub show_hunk {
 
 	# If one side is empty, then there is nothing to compare or highlight.
 	if (!@$a || !@$b) {
-		$line_cb->(@$a, @$b);
+		wrapped_line_cb(@$a, @$b);
 		return;
 	}
 
@@ -106,17 +136,17 @@ sub show_hunk {
 	# stupid, and only handle multi-line hunks that remove and add the same
 	# number of lines.
 	if (@$a != @$b) {
-		$line_cb->(@$a, @$b);
+		wrapped_line_cb(@$a, @$b);
 		return;
 	}
 
 	my @queue;
 	for (my $i = 0; $i < @$a; $i++) {
 		my ($rm, $add) = highlight_pair($a->[$i], $b->[$i]);
-		$line_cb->($rm);
+		wrapped_line_cb($rm);
 		push @queue, $add;
 	}
-	$line_cb->(@queue);
+	wrapped_line_cb(@queue);
 }
 
 sub highlight_pair {
