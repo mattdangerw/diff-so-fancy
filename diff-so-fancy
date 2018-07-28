@@ -517,6 +517,8 @@ sub horizontal_rule {
 	if (is_windows()) {
 		$width--;
 	}
+	$width--;
+	$width = ($width, 79)[$width > 79];
 
 	# em-dash http://www.fileformat.info/info/unicode/char/2014/index.htm
 	#my $dash = "\x{2014}";
