@@ -274,10 +274,6 @@ sub do_dsf_stuff {
 		# Just a regular line, print it out #
 		#####################################
 		} else {
-			# Mark empty line with a red/green box indicating addition/removal
-			if ($mark_empty_lines) {
-				$line = mark_empty_line($line);
-			}
 
 			# Remove the correct number of leading " " or "+" or "-"
 			if ($strip_leading_indicators) {
@@ -301,19 +297,6 @@ sub parse_hunk_header {
 	$o_cnt = 1 unless defined $o_cnt;
 	$n_cnt = 1 unless defined $n_cnt;
 	return ($o_ofs, $o_cnt, $n_ofs, $n_cnt);
-}
-
-# Mark the first char of an empty line
-sub mark_empty_line {
-	my $line = shift();
-
-	my $reset_color  = "\e\\[0?m";
-	my $reset_escape = "\e\[m";
-	my $invert_color = "\e\[7m";
-
-	$line =~ s/^($ansi_color_regex)[+-]$reset_color\s*$/$invert_color$1 $reset_escape\n/;
-
-	return $line;
 }
 
 # String to boolean
@@ -483,9 +466,13 @@ sub strip_leading_indicators {
 
 	if ($columns_to_remove == 0) {
 		return $line; # Nothing to do
+	} elsif ($columns_to_remove == 1) {
+		$line =~ s/^(${ansi_color_regex})[+-]/$1│/;
+	} elsif ($columns_to_remove == 2) {
+		$line =~ s/^(${ansi_color_regex}) [+-]/$1│/;
+		$line =~ s/^(${ansi_color_regex})[+-] /$1│/;
+		$line =~ s/^(${ansi_color_regex})  /$1 /;
 	}
-
-	$line =~ s/^(${ansi_color_regex})[ +-]{${columns_to_remove}}/$1/;
 
 	return $line;
 }
